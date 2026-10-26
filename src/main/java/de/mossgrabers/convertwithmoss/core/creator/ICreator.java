@@ -34,6 +34,13 @@ public interface ICreator<T extends ICoreTaskSettings> extends ICoreTask<T>
     void createPreset (File destinationFolder, IMultisampleSource multisampleSource) throws IOException;
 
 
+    /** Whether source subfolders may be recreated above this destination. */
+    default boolean preservesSourceFolderStructure ()
+    {
+        return true;
+    }
+
+
     /**
      * Combines several multi-samples input files and stores them into one library file.
      *

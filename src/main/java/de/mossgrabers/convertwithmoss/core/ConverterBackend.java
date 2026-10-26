@@ -121,6 +121,7 @@ import de.mossgrabers.convertwithmoss.format.sf2.Sf2Creator;
 import de.mossgrabers.convertwithmoss.format.sf2.Sf2Detector;
 import de.mossgrabers.convertwithmoss.format.sfz.SfzCreator;
 import de.mossgrabers.convertwithmoss.format.sfz.SfzDetector;
+import de.mossgrabers.convertwithmoss.format.sonicware.Lofi12XtCreator;
 import de.mossgrabers.convertwithmoss.format.soundbox.SoundboxCreator;
 import de.mossgrabers.convertwithmoss.format.soundbox.SoundboxDetector;
 import de.mossgrabers.convertwithmoss.format.sxt.SxtCreator;
@@ -302,6 +303,7 @@ public class ConverterBackend
         this.creators.add (new KontaktCreator (notifier));
         this.creators.add (new MaschineCreator (notifier));
         this.creators.add (new PolyendTrackerCreator (notifier));
+        this.creators.add (new Lofi12XtCreator (notifier));
         this.creators.add (new RenoiseCreator (notifier));
         this.creators.add (new MC707Creator (notifier));
         this.creators.add (new MV8000Creator (notifier));
@@ -513,7 +515,7 @@ public class ConverterBackend
 
         try
         {
-            final File multisampleOutputFolder = calcOutputFolder (this.detectionSettings.outputFolder, multisampleSource.getSubPath (), this.detectionSettings.createFolderStructure);
+            final File multisampleOutputFolder = calcOutputFolder (this.detectionSettings.outputFolder, multisampleSource.getSubPath (), this.detectionSettings.createFolderStructure && this.creator.preservesSourceFolderStructure ());
             this.creator.createPreset (multisampleOutputFolder, multisampleSource);
         }
         catch (final NoSuchFileException | FileNotFoundException ex)

@@ -83,6 +83,7 @@ The following multi-sample formats are supported:
 * [Native Instruments Kontakt](#native-instruments-kontakt)
 * [Native Instruments Maschine](#native-instruments-maschine)
 * [Polyend Tracker](#polyend-tracker)
+* [Sonicware Lofi-12 XT](#sonicware-lofi-12-xt)
 * [Propellerhead Reason NN-XT](#propellerhead-reason-nn-xt)
 * [Renoise](#renoise)
 * [Roland MC-707/MC-101](#roland-mc-707mc-101)
@@ -1167,3 +1168,58 @@ Other mappings are identical to creating presets/libraries.
 
 * File Format: Chooses the output format which is created.
 * Create only Waveforms: No Performances will be written. Only Waveform data.
+
+
+## Sonicware Lofi-12 XT
+
+Destination only (`-d Lofi12Xt`). Exports one 16-bit mono WAV per selected zone into
+`Lofi-12XT/System/Pool/Audio/kontakt/<multisample>/` under the chosen output directory.
+The device tree is fixed, regardless of the source-folder recreation option.
+
+* **Sample rate:** 24 kHz (default) or 12 kHz; CLI `-p Lofi12XtSampleRate=12000` or `24000`.
+* **Zones to export:** All C zones (default: root MIDI notes 0, 12, …, 120), or Every zone;
+  CLI `-p Lofi12XtNotes=c` or `all`. C selection uses root notes, not key-range coverage;
+  it does not repitch other samples to C. Missing root notes are exported only in Every zone mode.
+* Filenames are `<kebab-name>_<note>.wav`, at most 64 characters including the extension.
+  Notes use scientific pitch notation (`c4` = MIDI 60, `cs4` = 61); unknown roots use `unknown`.
+  Velocity layers, round robins, repeated names and repeated conversions receive numeric suffixes
+  before the note rather than overwriting files. Each multisample gets its own kebab-case folder.
+* Audio is resampled with the existing band-limited converter, mixed to mono by averaging channels,
+  and trimmed to the zone playback range. Reverse playback is baked in. Empty samples and samples
+  longer than 40 seconds are rejected; at most 1,024 zones fit in one multisample folder.
+* The factory chunk order is exactly `fmt `, `cue `, `LIST`, `ORSL`, `AFTG`, `data`.
+  The cue and `Tempo: 000.0` label are fixed factory bytes. Independent zones have an empty ORSL
+  slice table. AFTG is an eight-byte little-endian tag mask. No generic WAV metadata or sidecars are added.
+* Tags come from the multisample category: Kick → BD; Snare → SD; Hi-Hat → HH; Acoustic Drum/Drum → DR;
+  Bell/Chromatic Percussion/Clap/Percussion → PC; Bass → BS; Guitar → GT; Keyboard/Organ/Piano → KB;
+  Chip/Drone/Lead/Monosynth/Pad/Pluck/Synth → SY; Ensemble/Orchestral/Strings → ST;
+  Brass/Pipe/Winds → WN; Vocal → VO; Destruction/FX/Hits → FX; Loops → Loop; Slice/Slices → Slice.
+  Device tag names are also accepted. Other categories (including Unknown and World) stay untagged.
+* Instrument mappings, envelopes, filters, tuning, gain and sustain-loop behavior are not rendered
+  into these independent samples. A Loop or Slice tag is a browser category, not a playback instruction.
+
+Example:
+
+```sh
+java -cp 'target/lib/*' de.mossgrabers.convertwithmoss.ui.ConvertWithMossApp \
+  -s Kontakt -d Lofi12Xt -p Lofi12XtSampleRate=24000 -p Lofi12XtNotes=all input output
+```
+
+Run the standalone regression suite after building (the output directory must be new):
+
+```sh
+java -cp 'target/test-classes:target/classes:target/lib/*' \
+  de.mossgrabers.convertwithmoss.format.sonicware.Lofi12XtTest \
+  target/lofi12xt-check /path/to/factory/Lofi-12XT/System/Pool/Audio
+```
+
+The optional factory path tests byte-for-byte reconstruction, including slice pitch and choke data.
+Verified against all 3,177 WAVs from Brian's firmware 1.5 factory backup; all reproduce exactly.
+Six factory files exceed 40 seconds: the low-level writer preserves them for the proof, while the
+destination rejects new exports exceeding the card checker's 40-second limit.
+Validate an export with Brian's card checker before copying to a card (also check the merged card
+contents for the 32,768-item total limit):
+
+```sh
+uv run --with soundfile python -I ~/vibe/lofi-12-xt/tools/lofi12/check_card.py output
+```
